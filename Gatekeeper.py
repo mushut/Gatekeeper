@@ -1,48 +1,56 @@
-# Gatekeeper - Gateway application for sending data to IBM Cloud
+import data_packet
+import paho.mqtt.client as mqttClient
+import time
+import json
+import gps_data
 
-# Import modules! Needs to be run on raspberry pi to work.
-# import RPi.GPIO as GPIO # Is this needed at all?
-# import spidev
-# import ibmiotf.application
-# import time
-
-def test_cloud_connection():
-    # Send integer value from 0 to 255 in interval of 1 second to IBM Cloud for testing purposes
-    value = 0
-
-    # Add options
-    test_client = ibmiotf.application.Client()
-    test_client.connect()
-
-    while True:
-        # send value
-        test_client.publishEvent() # Remember to add testing info
-
-        value += 1
-
-        if value > 255:
-            value = 0
-
-        time.sleep(1)   # Change if different time interval needed.
 
 def main():
-    print "Gatekeeper"
+    print("Gatekeeper for Fleet Application")
+    gps_receiver = gps_data.gps_data()
+    index = 0
 
-    # Open SPI connection
-    # bus = ?
-    # device = ?
-    # spi = spidev.SpiDev()
-    # spi.open(bus, device)
+    def on_connect(client, userdata, flags, rc):
+        if rc == 0:
+            print("Connected to broker")
+            global Connected
+            Connected = True
+        else:
+            print("Connection failed")
 
-    # SPI settings
+    Connected = False
 
-    # Send test data
-    # test_send = [0x01, 0x02, 0x03]
-    # spi.xfer(test_send)
-    # Or xfer2
+    broker_address = "m21.cloudmqtt.com"
+    port = 14655
+    user = "lvwvnzhs"
+    password = "nqpqsMe0M0Q2"
+    client = mqttClient.Client("GPSBroker")
+    client.username_pw_set(user, password=password)
+    client.on_connect = on_connect
+    client.connect(broker_address, port=port)
+    client.loop_start()
 
-    # Send data to IBM Cloud with testing function
-    # test_cloud_connection()
-    print "Hello world!"
+    #client.publish("GPS/coordinates", payload=json.dumps(data.return_json()), qos=2, retain=False)
+
+    log = open("/home/fleetmaster/Gatekeeper/driving_log.txt", "a")
+    log.write("NEW LOG\n")
+
+
+    while True:
+        if index < 60:
+            coord_data = gps_receiver.read_gprmc()
+            #coord_data = [0.0, 0.0]
+            data = data_packet.data_packet(coord_data, index)
+            log.write(data.return_log_data())
+            #print(data.return_log_data(), end='')
+            #mqtt_sender.send_data(data.return_json())
+            client.publish("GPS/coordinates", payload=data.return_json(), qos=2, retain=False)
+
+            index += 1
+        else:
+            index = 0
+        
+        time.sleep(1)
+
 
 main()
