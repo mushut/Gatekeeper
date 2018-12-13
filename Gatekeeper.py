@@ -22,8 +22,8 @@ def main():
 
     broker_address = "m21.cloudmqtt.com"
     port = 14655
-    user = "lvwvnzhs"
-    password = "nqpqsMe0M0Q2"
+    user = "<user_here>"
+    password = "<password_here>"
     client = mqttClient.Client("GPSBroker")
     client.username_pw_set(user, password=password)
     client.on_connect = on_connect
